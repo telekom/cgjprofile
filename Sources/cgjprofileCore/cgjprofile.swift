@@ -1,18 +1,9 @@
 import Foundation
 import Security
-
-extension String {
-    func safeStartIndex (index : String.Index?) -> String.Index {
-        if let index = index {
-            return index
-        }
-        else {
-            return self.startIndex
-        }
-    }
-}
+import Utility
 
 public struct Mobileprovision {
+    var Name : String
     var ExpirationDate : Date
     var Entitlements : [String:Any]
     var CreationDate : Date
@@ -62,8 +53,9 @@ public struct Mobileprovision {
             Version = version
         } else { return nil}
         Platform = plist["Platform"] as? [String]
+        Name = plist["Name"] as! String
     }
-    
+
     static func decodeX509 (data: Data) -> String {
         var outstr = ""
         let task = Process()
@@ -82,32 +74,69 @@ public struct Mobileprovision {
         task.waitUntilExit()
         return outstr
     }
+}
+
+public class PrettyProvision {
+
+    var mobileprovision : Mobileprovision
     
-    func prettyPrint(format: String = "%u %T %N") {
-        
-        var (output, index) = parseNonFormatString(fromString: format)
-        fputs(output, stdout)
-        var input = format[index]
-        if input == "%" {
-            fputs ("%", stdout)
+    public var formatter : DateFormatter = { let new = DateFormatter(); new.dateStyle = .short; new.timeStyle = .short; return new}()
+    
+    
+    required public init(_ mobileprovision : Mobileprovision) {
+        self.mobileprovision = mobileprovision
+    }
+    
+    // Again: No clue why I must specify Foundation
+    public convenience init?(url : Foundation.URL) {
+        do {
+            let provisionData = try Data(contentsOf: url)
+            self.init(data: provisionData)
         }
-        else {
-            let (number, index) = parseInteger(fromString: format, startIndex: index)
-            guard index < format.endIndex else {
-                return
-            }
-            input = format[index]
-            switch input {
-            case "u":
-                fputs (self.UUID, stdout)
-            default:
-                break
-            }
+        catch {
+            return nil
         }
     }
     
-    func parseNonFormatString(fromString string : String, startIndex : String.Index? = nil) -> (String, String.Index) {
-        var index = string.safeStartIndex(index: startIndex)
+    public convenience init?(data : Data) {
+        do {
+            let decodedProvision = try cgjprofileTool.decodeCMS(data:data)
+            let plist = try cgjprofileTool.decodePlist (data: decodedProvision)
+            if let mobileprovision = Mobileprovision(plist) {
+                self.init (mobileprovision)
+            }
+            else {
+                return nil
+            }
+        }
+        catch {
+            return nil
+        }
+    }
+    
+    public func print(format: String = "%u %t %N") {
+
+        fputs (parsedOutput(format)+"\n", stdout)
+    }
+
+    public func parsedOutput(_ format : String) -> String {
+        var output = ""
+        var index = format.startIndex
+        while (index < format.endIndex) {
+            var result : String
+            (result, index) = parseNonFormatString(fromString: format, startIndex: index)
+            output.append(result)
+            guard index < format.endIndex else {
+                break
+            }
+            (result, index) = parseFormat(fromString: format, startIndex:index)
+            output.append(result)
+        }
+        return output
+    }
+    
+    func parseNonFormatString(fromString string : String, startIndex : String.Index) -> (String, String.Index) {
+        var index = startIndex
         var output = "";
 
         guard index < string.endIndex else {
@@ -125,8 +154,8 @@ public struct Mobileprovision {
         return (output, index)
     }
     
-    func parseFormat(fromString string : String, startIndex : String.Index? = nil) -> (String, String.Index) {
-        var index = string.safeStartIndex(index: startIndex)
+    func parseFormat(fromString string : String, startIndex : String.Index) -> (String, String.Index) {
+        var index = startIndex
         guard index < string.endIndex else {
             return ("", index)
         }
@@ -141,16 +170,50 @@ public struct Mobileprovision {
         input = string[index]
 
         if input == "%" {
+            index = string.index(after: index)
             return ("%", index)
         }
         else {
-            return ("noimp", index)
+            var number : Int = 0
+            (number, index) = parseInteger(fromString: string, startIndex: index)
+            guard index < string.endIndex else {
+                return ("", index)
+            }
+            input = string[index]
+            var value = self.value(forFormat: input)
+            if number > value.count {
+                let padding = number - value.count
+                for _ in 0 ..< padding {
+                    value.append(" ")
+                }
+            }
+            index = string.index(after: index)
+            return (value, index)
+        }
+    }
+
+    func value(forFormat input: Character) -> String {
+        switch input {
+        case "e":
+            return formatter.string(from: mobileprovision.ExpirationDate)
+        case "c":
+            return formatter.string(from: mobileprovision.CreationDate)
+        case "u":
+            return mobileprovision.UUID
+        case "a":
+            return mobileprovision.AppIDName
+        case "t":
+            return mobileprovision.TeamName
+        case "n":
+            return mobileprovision.Name
+        default:
+            return ""
         }
     }
     
-    func parseInteger(fromString string : String, startIndex : String.Index? = nil) -> (Int, String.Index) {
+    func parseInteger(fromString string : String, startIndex : String.Index) -> (Int, String.Index) {
         var numberString : String = ""
-        var index = string.safeStartIndex(index: startIndex)
+        var index = startIndex
         guard index < string.endIndex else {
             return (0, index)
         }
@@ -172,11 +235,49 @@ public final class cgjprofileTool {
     private let arguments: [String]
 
     public init(arguments: [String] = CommandLine.arguments) { 
-        self.arguments = arguments
+        self.arguments = Array(arguments.dropFirst()) // Don't include the command name
     }
-
+    
+    // No clue why I have to specify Foundation here
+    func workingURLs (paths : [String]? = nil) -> [Foundation.URL] {
+        if let paths = paths {
+            return paths.map {
+                URL(fileURLWithPath: $0)
+            }
+        }
+        else {
+            let fm = FileManager.default
+            let librayURL = fm.urls(for: .libraryDirectory, in: .userDomainMask).first!
+            let profilesURL = librayURL.appendingPathComponent("MobileDevice/Provisioning Profiles")
+            return try! FileManager.default.contentsOfDirectory(at: profilesURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles, .skipsPackageDescendants, .skipsSubdirectoryDescendants])
+        }
+    }
+    
     public func run() throws {
-        print("Hello world")
+        let parser = ArgumentParser(usage: "[--format=\"format string\" [path]", overview: "Lists all mobileprovision files, or a single one")
+        
+        let formatOption: OptionArgument<String> = parser.add(option: "--format", shortName: "-f", kind: String.self, usage: "Optional format String\n      %e  ExpirationDate\n      %c  CreationDate\n      %u  UUID\n      %a  AppIDName\n      %t  TeamName\n      %n  Name")
+
+        let pathsOption = parser.add(positional: "path", kind: [String].self, optional:true, usage:"Optional paths to mobileprovision files")
+
+        let parsedArguments = try parser.parse(arguments)
+        
+        let workingPaths = workingURLs(paths: parsedArguments.get(pathsOption))
+        var format : String!
+        format = parsedArguments.get(formatOption)
+        if format == nil {
+            format = "%u %t %n"
+        }
+        
+        for url in workingPaths {
+            if let provision = PrettyProvision(url: url) {
+                provision.print(format: format)
+            }
+            else {
+                let output = "Error decoding \(url)"
+                fputs(output, stderr)
+            }
+        }
     }
     
     enum CMSError : Error {
