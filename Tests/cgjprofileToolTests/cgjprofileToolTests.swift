@@ -130,4 +130,9 @@ class cgjprofileToolTests: XCTestCase {
         let output = prettyprovision.parsedOutput("%u %t %a %n")
         XCTAssertEqual("351d20ea-a4c6-4e3d-ad00-1e275cbfead1 Deutsche Telekom AG Telekom Shop Offer Extension Telekom Shop Offer Extension DEV", output)
     }
+    
+    func testExpirationDate() throws {
+        let days = prettyprovision.daysToExpiration
+        XCTAssertEqual(-950, days)
+    }
 }

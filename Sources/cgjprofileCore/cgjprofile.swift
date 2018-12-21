@@ -76,161 +76,6 @@ public struct Mobileprovision {
     }
 }
 
-public class PrettyProvision {
-
-    var mobileprovision : Mobileprovision
-    
-    public var formatter : DateFormatter = { let new = DateFormatter(); new.dateStyle = .short; new.timeStyle = .short; return new}()
-    
-    
-    required public init(_ mobileprovision : Mobileprovision) {
-        self.mobileprovision = mobileprovision
-    }
-    
-    // Again: No clue why I must specify Foundation
-    public convenience init?(url : Foundation.URL) {
-        do {
-            let provisionData = try Data(contentsOf: url)
-            self.init(data: provisionData)
-        }
-        catch {
-            return nil
-        }
-    }
-    
-    public convenience init?(data : Data) {
-        do {
-            let decodedProvision = try cgjprofileTool.decodeCMS(data:data)
-            let plist = try cgjprofileTool.decodePlist (data: decodedProvision)
-            if let mobileprovision = Mobileprovision(plist) {
-                self.init (mobileprovision)
-            }
-            else {
-                return nil
-            }
-        }
-        catch {
-            return nil
-        }
-    }
-    
-    public func print(format: String = "%u %t %N") {
-
-        fputs (parsedOutput(format)+"\n", stdout)
-    }
-
-    public func parsedOutput(_ format : String) -> String {
-        var output = ""
-        var index = format.startIndex
-        while (index < format.endIndex) {
-            var result : String
-            (result, index) = parseNonFormatString(fromString: format, startIndex: index)
-            output.append(result)
-            guard index < format.endIndex else {
-                break
-            }
-            (result, index) = parseFormat(fromString: format, startIndex:index)
-            output.append(result)
-        }
-        return output
-    }
-    
-    func parseNonFormatString(fromString string : String, startIndex : String.Index) -> (String, String.Index) {
-        var index = startIndex
-        var output = "";
-
-        guard index < string.endIndex else {
-            return (output, index)
-        }
-        var input = string[index]
-        while input != "%" {
-            output.append(input)
-            index = string.index(after: index)
-            guard index < string.endIndex else {
-                break
-            }
-            input = string[index]
-        }
-        return (output, index)
-    }
-    
-    func parseFormat(fromString string : String, startIndex : String.Index) -> (String, String.Index) {
-        var index = startIndex
-        guard index < string.endIndex else {
-            return ("", index)
-        }
-        var input = string[index]
-        guard input == "%" else {
-            return ("", index)
-        }
-        index = string.index(after: index)
-        guard index < string.endIndex else {
-            return ("", index)
-        }
-        input = string[index]
-
-        if input == "%" {
-            index = string.index(after: index)
-            return ("%", index)
-        }
-        else {
-            var number : Int = 0
-            (number, index) = parseInteger(fromString: string, startIndex: index)
-            guard index < string.endIndex else {
-                return ("", index)
-            }
-            input = string[index]
-            var value = self.value(forFormat: input)
-            if number > value.count {
-                let padding = number - value.count
-                for _ in 0 ..< padding {
-                    value.append(" ")
-                }
-            }
-            index = string.index(after: index)
-            return (value, index)
-        }
-    }
-
-    func value(forFormat input: Character) -> String {
-        switch input {
-        case "e":
-            return formatter.string(from: mobileprovision.ExpirationDate)
-        case "c":
-            return formatter.string(from: mobileprovision.CreationDate)
-        case "u":
-            return mobileprovision.UUID
-        case "a":
-            return mobileprovision.AppIDName
-        case "t":
-            return mobileprovision.TeamName
-        case "n":
-            return mobileprovision.Name
-        default:
-            return ""
-        }
-    }
-    
-    func parseInteger(fromString string : String, startIndex : String.Index) -> (Int, String.Index) {
-        var numberString : String = ""
-        var index = startIndex
-        guard index < string.endIndex else {
-            return (0, index)
-        }
-        var input = string[index]
-        while "0123456789".contains(input) {
-            numberString.append(input)
-            index = string.index(after: index)
-            guard index < string.endIndex else {
-                break
-            }
-            input = string[index]
-        }
-        let number = Int(numberString)
-        return (number ?? 0, index)
-    }
-}
-
 public final class cgjprofileTool {
     private let arguments: [String]
 
@@ -257,7 +102,7 @@ public final class cgjprofileTool {
         let parser = ArgumentParser(usage: "[--format=\"format string\" [path]", overview: "Lists all mobileprovision files, or a single one")
         
         let formatOption: OptionArgument<String> = parser.add(option: "--format", shortName: "-f", kind: String.self, usage: "Optional format String\n      %e  ExpirationDate\n      %c  CreationDate\n      %u  UUID\n      %a  AppIDName\n      %t  TeamName\n      %n  Name")
-
+        let warningsOption: OptionArgument<Int> = parser.add(option: "--warnExpiration", shortName: "-w", kind: Int.self, usage: "Set days to warn about expiration")
         let pathsOption = parser.add(positional: "path", kind: [String].self, optional:true, usage:"Optional paths to mobileprovision files")
 
         let parsedArguments = try parser.parse(arguments)
@@ -268,10 +113,11 @@ public final class cgjprofileTool {
         if format == nil {
             format = "%u %t %n"
         }
+        let warnDays = parsedArguments.get(warningsOption)
         
         for url in workingPaths {
             if let provision = PrettyProvision(url: url) {
-                provision.print(format: format)
+                provision.print(format: format, warnDays:warnDays)
             }
             else {
                 let output = "Error decoding \(url)"
