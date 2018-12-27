@@ -1,6 +1,7 @@
 import Foundation
 import Security
 import Utility
+import Darwin
 
 public final class cgjprofileTool {
     private let arguments: [String]
@@ -24,7 +25,10 @@ public final class cgjprofileTool {
         }
     }
     
-    public func run() throws {
+    public func run() throws -> Int32 {
+        
+        let result = EXIT_FAILURE
+        
         let parser = ArgumentParser(usage: "[--format=\"format string\" [path]", overview: "Lists all mobileprovision files, or a single one")
         
         let formatOption: OptionArgument<String> = parser.add(option: "--format", shortName: "-f", kind: String.self, usage: "Optional format String\n      %e  ExpirationDate\n      %c  CreationDate\n      %u  UUID\n      %a  AppIDName\n      %t  TeamName\n      %n  Name")
@@ -50,6 +54,7 @@ public final class cgjprofileTool {
                 fputs(output, stderr)
             }
         }
+        return result
     }
 }
 
