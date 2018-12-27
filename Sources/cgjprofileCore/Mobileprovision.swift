@@ -1,6 +1,6 @@
 import Foundation
 
-public struct Mobileprovision {
+public class Mobileprovision {
 
     enum CMSError : Error {
         case create
@@ -62,8 +62,8 @@ public struct Mobileprovision {
         Name = plist["Name"] as! String
     }
     
-    // Again: No clue why I must specify Foundation
-    public init?(url : Foundation.URL) {
+    // No clue why I must specify Foundation
+    public convenience init?(url : Foundation.URL) {
         do {
             let provisionData = try Data(contentsOf: url)
             self.init(data: provisionData)
@@ -73,7 +73,7 @@ public struct Mobileprovision {
         }
     }
     
-    public init?(data : Data) {
+    public convenience init?(data : Data) {
         do {
             let decodedProvision = try Mobileprovision.decodeCMS(data:data)
             let plist = try Mobileprovision.decodePlist (data: decodedProvision)

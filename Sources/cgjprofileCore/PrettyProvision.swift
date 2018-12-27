@@ -1,37 +1,11 @@
 import Foundation
 
-public class PrettyProvision {
+public class PrettyProvision : Mobileprovision {
 
-    var mobileprovision : Mobileprovision
     var markExpired = true
     var warnDays = 30
     
     public var formatter : DateFormatter = { let new = DateFormatter(); new.dateStyle = .short; new.timeStyle = .short; return new}()
-    
-    
-    required public init(_ mobileprovision : Mobileprovision) {
-        self.mobileprovision = mobileprovision
-    }
-    
-    // Again: No clue why I must specify Foundation
-    public convenience init?(url : Foundation.URL) {
-        if let mobileprovision = Mobileprovision(url:url) {
-            self.init(mobileprovision)
-        }
-        else {
-            return nil
-        }
-        
-    }
-    
-    public convenience init?(data : Data) {
-        if let mobileprovision = Mobileprovision(data:data) {
-            self.init(mobileprovision)
-        }
-        else {
-            return nil
-        }
-    }
     
     public func print(format: String = "%u %t %n", warnDays : Int? = nil) {
         if let warnDays = warnDays, warnDays > 0 {
@@ -116,9 +90,9 @@ public class PrettyProvision {
     func value(forFormat input: Character) -> String {
         switch input {
         case "e":
-            var output = formatter.string(from: mobileprovision.ExpirationDate)
+            var output = formatter.string(from: self.ExpirationDate)
             if markExpired {
-                let days = mobileprovision.daysToExpiration
+                let days = self.daysToExpiration
                 let ANSI_COLOR_RED = "\u{001b}[31m"
                 let ANSI_COLOR_GREEN = "\u{001b}[32m"
                 let ANSI_COLOR_YELLOW = "\u{001b}[33m"
@@ -135,15 +109,15 @@ public class PrettyProvision {
             }
             return output
         case "c":
-            return formatter.string(from: mobileprovision.CreationDate)
+            return formatter.string(from: self.CreationDate)
         case "u":
-            return mobileprovision.UUID
+            return self.UUID
         case "a":
-            return mobileprovision.AppIDName
+            return self.AppIDName
         case "t":
-            return mobileprovision.TeamName
+            return self.TeamName
         case "n":
-            return mobileprovision.Name
+            return self.Name
         default:
             return ""
         }
