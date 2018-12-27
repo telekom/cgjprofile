@@ -27,7 +27,7 @@ public final class cgjprofileTool {
     
     public func run() throws -> Int32 {
         
-        let result = EXIT_FAILURE
+        var result = EXIT_SUCCESS
         
         let parser = ArgumentParser(usage: "[--format=\"format string\" [path]", overview: "Lists all mobileprovision files, or a single one")
         
@@ -48,6 +48,9 @@ public final class cgjprofileTool {
         for url in workingPaths {
             if let provision = PrettyProvision(url: url) {
                 provision.print(format: format, warnDays:warnDays)
+                if provision.daysToExpiration <= 0 {
+                    result = EXIT_FAILURE
+                }
             }
             else {
                 let output = "Error decoding \(url)"
