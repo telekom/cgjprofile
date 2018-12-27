@@ -15,27 +15,20 @@ public class PrettyProvision {
     
     // Again: No clue why I must specify Foundation
     public convenience init?(url : Foundation.URL) {
-        do {
-            let provisionData = try Data(contentsOf: url)
-            self.init(data: provisionData)
+        if let mobileprovision = Mobileprovision(url:url) {
+            self.init(mobileprovision)
         }
-        catch {
+        else {
             return nil
         }
+        
     }
     
     public convenience init?(data : Data) {
-        do {
-            let decodedProvision = try cgjprofileTool.decodeCMS(data:data)
-            let plist = try cgjprofileTool.decodePlist (data: decodedProvision)
-            if let mobileprovision = Mobileprovision(plist) {
-                self.init (mobileprovision)
-            }
-            else {
-                return nil
-            }
+        if let mobileprovision = Mobileprovision(data:data) {
+            self.init(mobileprovision)
         }
-        catch {
+        else {
             return nil
         }
     }
@@ -125,7 +118,7 @@ public class PrettyProvision {
         case "e":
             var output = formatter.string(from: mobileprovision.ExpirationDate)
             if markExpired {
-                let days = self.daysToExpiration
+                let days = mobileprovision.daysToExpiration
                 let ANSI_COLOR_RED = "\u{001b}[31m"
                 let ANSI_COLOR_GREEN = "\u{001b}[32m"
                 let ANSI_COLOR_YELLOW = "\u{001b}[33m"
@@ -173,16 +166,6 @@ public class PrettyProvision {
         }
         let number = Int(numberString)
         return (number ?? 0, index)
-    }
-    
-    public var daysToExpiration : Int {
-        get {
-            let cal = Calendar.current
-            let expDate = mobileprovision.ExpirationDate
-            let now = Date()
-            let components = cal.dateComponents([Calendar.Component.day], from: now, to: expDate)
-            return components.day ?? 0
-        }
     }
 }
 
