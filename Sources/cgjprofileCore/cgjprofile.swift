@@ -50,9 +50,21 @@ public final class cgjprofileTool {
             if let provision = PrettyProvision(url: url) {
                 if !quiet {
                     provision.print(format: format, warnDays:warnDays)
-                if provision.daysToExpiration <= 0 {
-                    result = EXIT_FAILURE
                 }
+                let ANSI_COLOR_RED = "\u{001b}[31m"
+                let ANSI_COLOR_YELLOW = "\u{001b}[33m"
+                let ANSI_COLOR_RESET = "\u{001b}[0m"
+                let daysToExpiration = provision.daysToExpiration
+                if daysToExpiration <= 0 {
+
+                    let description = "\(ANSI_COLOR_RED)ERROR: \(provision.UUID) \(provision.Name) is expired\(ANSI_COLOR_RESET)\n"
+                    fputs(description, stderr)
+                    result = EXIT_FAILURE
+                } else if let warnDays = warnDays, daysToExpiration <= warnDays {
+                    let description = "\(ANSI_COLOR_YELLOW)WARNING: \(provision.UUID) will expire in \(daysToExpiration) days\(ANSI_COLOR_RESET)\n"
+                    fputs(description, stderr)
+                }
+                
             }
             else {
                 let output = "Error decoding \(url)\n"
