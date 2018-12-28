@@ -33,6 +33,7 @@ public final class cgjprofileTool {
         
         let formatOption: OptionArgument<String> = parser.add(option: "--format", shortName: "-f", kind: String.self, usage: "Optional format String\n      %e  ExpirationDate\n      %c  CreationDate\n      %u  UUID\n      %a  AppIDName\n      %t  TeamName\n      %n  Name")
         let warningsOption: OptionArgument<Int> = parser.add(option: "--warnExpiration", shortName: "-w", kind: Int.self, usage: "Set days to warn about expiration")
+        let quietOption: OptionArgument<Bool> = parser.add(option: "--quiet", shortName: "-q", kind: Bool.self, usage: "Don't print any output")
         let pathsOption = parser.add(positional: "path", kind: [String].self, optional:true, usage:"Optional paths to mobileprovision files")
 
         let parsedArguments = try parser.parse(arguments)
@@ -44,16 +45,17 @@ public final class cgjprofileTool {
             format = "%u %t %n"
         }
         let warnDays = parsedArguments.get(warningsOption)
-        
+        let quiet = parsedArguments.get(quietOption) ?? false
         for url in workingPaths {
             if let provision = PrettyProvision(url: url) {
-                provision.print(format: format, warnDays:warnDays)
+                if !quiet {
+                    provision.print(format: format, warnDays:warnDays)
                 if provision.daysToExpiration <= 0 {
                     result = EXIT_FAILURE
                 }
             }
             else {
-                let output = "Error decoding \(url)"
+                let output = "Error decoding \(url)\n"
                 fputs(output, stderr)
             }
         }
