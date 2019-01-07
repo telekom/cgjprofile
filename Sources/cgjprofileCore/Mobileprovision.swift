@@ -78,9 +78,12 @@ public class Mobileprovision {
         if let applicationIdentifierPrefix = plist["ApplicationIdentifierPrefix"] as? [String] {
             ApplicationIdentifierPrefix = applicationIdentifierPrefix
         } else { return nil}
-        if let certs = plist["DeveloperCertificates"] as? [Data] {
+        if let certdata = plist["DeveloperCertificates"] as? [Data] {
             // openssl x509 -noout -inform DER -subject
-            DeveloperCertificates = certs
+            DeveloperCertificates = certdata.compactMap({ (data) -> SecCertificate? in
+                let certificate = SecCertificateCreateWithData(nil, data as CFData)
+                return certificate
+            })
         } else { return nil}
         if let teamIdentifier = plist["TeamIdentifier"] as? [String] {
             TeamIdentifier = teamIdentifier
@@ -135,15 +138,11 @@ public class Mobileprovision {
         case unableToDecodeItem
     }
     
-    static func certificateDisplayName (data: Data) throws -> String {
+    static func certificateDisplayName (_ certificate : SecCertificate) throws -> String {
         
         var commonName : String = "-"
         var organizationalUnit : String = "-"
         var organization : String = "-"
-        
-        guard let certificate = SecCertificateCreateWithData(nil, data as CFData) else {
-            throw X509Error.unableToDecodeItem
-        }
         
         var error: Unmanaged<CFError>?
         guard let info = SecCertificateCopyValues(certificate, [kSecOIDX509V1SubjectName, kSecOIDX509V1SubjectNameStd, kSecOIDX509V1SubjectNameCStruct] as CFArray, &error) as? [CFString:[CFString:Any]] else {
@@ -176,11 +175,7 @@ public class Mobileprovision {
         return "\(commonName) \(organizationalUnit) \(organization)"
     }
     
-    static func certificateEnddate (data: Data) throws -> Date {
-        
-        guard let certificate = SecCertificateCreateWithData(nil, data as CFData) else {
-            throw X509Error.unableToDecodeItem
-        }
+    static func certificateEnddate (_ certificate : SecCertificate) throws -> Date {
         
         var error: Unmanaged<CFError>?
         guard let info = SecCertificateCopyValues(certificate, [kSecOIDX509V1ValidityNotAfter] as CFArray, &error) as? [CFString:[CFString:Any]] else {

@@ -168,11 +168,10 @@ class cgjprofileToolTests: XCTestCase {
     }
     
     func testCertificateEndDate() throws {
-        if let cert = prettyprovision.DeveloperCertificates.first {
-            
-            let secCert = SecCertificateCreateWithData(nil, cert as CFData)
-            XCTAssertNotNil(secCert)
-            
+        guard let cert = prettyprovision.DeveloperCertificates.first else {
+            XCTFail()
+            return
+        }
         
         var dc = DateComponents()
         dc.year = 2016
@@ -184,11 +183,11 @@ class cgjprofileToolTests: XCTestCase {
         let testDate = Calendar.autoupdatingCurrent.date(from: dc)
         
         var enddate : Date!
-            XCTAssertNoThrow(enddate = try Mobileprovision.certificateEnddate(data: cert))
+        XCTAssertNoThrow(enddate = try Mobileprovision.certificateEnddate(cert))
         
         XCTAssertEqual(enddate, testDate)
         var error: Unmanaged<CFError>?
-            guard let dict = SecCertificateCopyValues(secCert!,[kSecOIDX509V1ValidityNotAfter] as CFArray,&error) else {
+        guard let dict = SecCertificateCopyValues(cert,[kSecOIDX509V1ValidityNotAfter] as CFArray,&error) else {
             throw error!.takeRetainedValue() as Error
         }
         
@@ -218,15 +217,11 @@ class cgjprofileToolTests: XCTestCase {
             }
         }
     }
-        else {
-            XCTFail()
-        }
-    }
     
     func testCertificateName() throws {
         if let cert = prettyprovision.DeveloperCertificates.first {
             
-            let certName = try Mobileprovision.certificateDisplayName(data: cert)
+            let certName = try Mobileprovision.certificateDisplayName(cert)
             
             XCTAssertNotNil(certName)
             
