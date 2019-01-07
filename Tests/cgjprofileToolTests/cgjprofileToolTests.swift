@@ -184,7 +184,7 @@ class cgjprofileToolTests: XCTestCase {
         let testDate = Calendar.autoupdatingCurrent.date(from: dc)
         
         var enddate : Date!
-        XCTAssertNoThrow(enddate = try Mobileprovision.certificateEnddate(cert))
+        XCTAssertNoThrow(enddate = try cert.enddate())
         
         XCTAssertEqual(enddate, testDate)
         var error: Unmanaged<CFError>?
@@ -225,7 +225,7 @@ class cgjprofileToolTests: XCTestCase {
             return
         }
         
-        let certName = try provisionCertificate.certificateDisplayName()
+        let certName = try provisionCertificate.displayName()
         XCTAssertNotNil(certName)
         
         let certIdenties = try Mobileprovision.identifyCertificates()

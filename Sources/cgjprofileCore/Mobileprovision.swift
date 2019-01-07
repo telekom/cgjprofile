@@ -166,27 +166,11 @@ public class Mobileprovision {
             guard let cert = certOptional else {
                 throw X509Error.unableToReadKeychain
             }
-            let name = try cert.certificateDisplayName()
+            let name = try cert.displayName()
             dict[name] = cert
             return dict
         }
         return certDict
-    }
-    
-    static func certificateEnddate (_ certificate : SecCertificate) throws -> Date {
-        
-        var error: Unmanaged<CFError>?
-        guard let info = SecCertificateCopyValues(certificate, [kSecOIDX509V1ValidityNotAfter] as CFArray, &error) as? [CFString:[CFString:Any]] else {
-            throw error!.takeRetainedValue() as Error
-        }
-        
-        guard let value = info[kSecOIDX509V1ValidityNotAfter]?[kSecPropertyKeyValue] as? NSNumber else {
-            throw X509Error.unableToDecodeItem
-        }
-        
-        let date = Date(timeIntervalSinceReferenceDate: value.doubleValue)
-        
-        return date
     }
     
     public static func decodeCMS (data : Data) throws -> Data {
@@ -220,7 +204,7 @@ public class Mobileprovision {
 }
 
 extension SecCertificate {
-    func certificateDisplayName () throws -> String {
+    func displayName () throws -> String {
         
         var commonName : String = "-"
         var organizationalUnit : String = "-"
@@ -253,7 +237,21 @@ extension SecCertificate {
                 continue
             }
         }
-        
         return "\(commonName) \(organizationalUnit) \(organization)"
+    }
+    
+    func enddate () throws -> Date {
+        
+        var error: Unmanaged<CFError>?
+        guard let info = SecCertificateCopyValues(self, [kSecOIDX509V1ValidityNotAfter] as CFArray, &error) as? [CFString:[CFString:Any]] else {
+            throw error!.takeRetainedValue() as Error
+        }
+        
+        guard let value = info[kSecOIDX509V1ValidityNotAfter]?[kSecPropertyKeyValue] as? NSNumber else {
+            throw X509Error.unableToDecodeItem
+        }
+        
+        let date = Date(timeIntervalSinceReferenceDate: value.doubleValue)
+        return date
     }
 }
