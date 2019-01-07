@@ -139,45 +139,38 @@ public class Mobileprovision {
 
     }
     
-    enum X509Error : Error {
-        case unableToDecodeItem
-    }
-    
-    static func certificateDisplayName (_ certificate : SecCertificate) throws -> String {
+    static func identifyCertificates () throws -> [String : SecCertificate] {
+        // Set up the keychain search dictionary:
+        var certificateQuery : [String: Any] = [:]
+        // This keychain item is a generic password.
+        certificateQuery[kSecClass as String] = kSecClassIdentity
+        certificateQuery[kSecReturnRef as String] = kCFBooleanTrue
+        certificateQuery[kSecMatchLimit as String] = kSecMatchLimitAll
         
-        var commonName : String = "-"
-        var organizationalUnit : String = "-"
-        var organization : String = "-"
-        
-        var error: Unmanaged<CFError>?
-        guard let info = SecCertificateCopyValues(certificate, [kSecOIDX509V1SubjectName, kSecOIDX509V1SubjectNameStd, kSecOIDX509V1SubjectNameCStruct] as CFArray, &error) as? [CFString:[CFString:Any]] else {
-            throw error!.takeRetainedValue() as Error
+        //Initialize the dictionary used to hold return data from the keychain:
+        var outArray : AnyObject?
+        // If the keychain item exists, return the attributes of the item:
+        guard SecItemCopyMatching(certificateQuery as CFDictionary, &outArray) == noErr else {
+            throw X509Error.unableToReadKeychain
         }
+        let identArray = outArray as! [SecIdentity]
         
-        guard let subjectName = info[kSecOIDX509V1SubjectName]?[kSecPropertyKeyValue] as? [[CFString : String]] else {
-            throw X509Error.unableToDecodeItem
-        }
-        
-        for item in subjectName {
-            
-            guard let value = item[kSecPropertyKeyValue] else {
-                throw X509Error.unableToDecodeItem
+        let certDict = try identArray.reduce([String:SecCertificate]()) { (dict, identity) -> [String:SecCertificate] in
+            var dict = dict
+            var certOptional : SecCertificate?
+            guard withUnsafeMutablePointer(to: &certOptional, { (c) -> OSStatus in
+                return SecIdentityCopyCertificate(identity, c)
+            }) == noErr else {
+                throw X509Error.unableToReadKeychain
             }
-            switch item[kSecPropertyKeyLabel] {
-                case kSecOIDCommonName:
-                    commonName = value
-                case kSecOIDOriganziationName:
-                    organization = value
-                case kSecOIDOrganizationalUnitName:
-                    organizationalUnit = value
-                case kSecOIDUserID, kSecOIDCountryName:
-                    continue
-                default:
-                    continue
-                }
+            guard let cert = certOptional else {
+                throw X509Error.unableToReadKeychain
+            }
+            let name = try cert.certificateDisplayName()
+            dict[name] = cert
+            return dict
         }
-        
-        return "\(commonName) \(organizationalUnit) \(organization)"
+        return certDict
     }
     
     static func certificateEnddate (_ certificate : SecCertificate) throws -> Date {
