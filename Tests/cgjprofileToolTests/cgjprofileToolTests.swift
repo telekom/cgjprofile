@@ -36,7 +36,7 @@ class cgjprofileToolTests: XCTestCase {
     
     override func setUp() {
         super.setUp()
-        url = URL(string: "file:///Users/below/Library/MobileDevice/Provisioning%20Profiles/351d20ea-a4c6-4e3d-ad00-1e275cbfead1.mobileprovision")
+        url = URL(string: "file:///Users/below/Library/MobileDevice/Provisioning%20Profiles/703ae630-7ac3-471e-8343-6a411eae0df8.mobileprovision")
         provisionData = try! Data(contentsOf: url)
         let decodedProvision = try! Mobileprovision.decodeCMS(data:provisionData)
         let plist = try! Mobileprovision.decodePlist (data: decodedProvision)
@@ -100,7 +100,7 @@ class cgjprofileToolTests: XCTestCase {
     
     func testFormatUUID() throws {
         let testString = "%u"
-        XCTAssertEqual("351d20ea-a4c6-4e3d-ad00-1e275cbfead1", prettyprovision.parseFormat(fromString:testString, startIndex:testString.startIndex).0)
+        XCTAssertEqual("703ae630-7ac3-471e-8343-6a411eae0df8", prettyprovision.parseFormat(fromString:testString, startIndex:testString.startIndex).0)
     }
     
     func testPadding() throws {
@@ -113,7 +113,7 @@ class cgjprofileToolTests: XCTestCase {
         var (result, index) = prettyprovision.parseNonFormatString(fromString:testString, startIndex:testString.startIndex)
         XCTAssertEqual(result, "The UDID is ")
         (result, index) = prettyprovision.parseFormat(fromString:testString, startIndex: index)
-        XCTAssertEqual(result, "351d20ea-a4c6-4e3d-ad00-1e275cbfead1")
+        XCTAssertEqual(result, "703ae630-7ac3-471e-8343-6a411eae0df8")
     }
     
     func testOutputOne() throws {
@@ -127,13 +127,13 @@ class cgjprofileToolTests: XCTestCase {
     func testCombinationFour() throws {
         let testString = "The UDID is %%%u%%"
         let output = prettyprovision.parsedOutput(testString)
-        XCTAssertEqual("The UDID is %351d20ea-a4c6-4e3d-ad00-1e275cbfead1%", output)
+        XCTAssertEqual("The UDID is %703ae630-7ac3-471e-8343-6a411eae0df8%", output)
     }
     
     func testComplexFormat() throws {
         let format = "%u %t %t"
         let output = prettyprovision.parsedOutput(format)
-        XCTAssertEqual("351d20ea-a4c6-4e3d-ad00-1e275cbfead1 Deutsche Telekom AG Deutsche Telekom AG", output)
+        XCTAssertEqual("703ae630-7ac3-471e-8343-6a411eae0df8 KPN B.V. KPN B.V.", output)
 
     }
     func testWorkingURLsPath() throws {
@@ -152,12 +152,12 @@ class cgjprofileToolTests: XCTestCase {
     
     func testDefaultFormat() throws {
         let output = prettyprovision.parsedOutput("%u %t %a %n")
-        XCTAssertEqual("351d20ea-a4c6-4e3d-ad00-1e275cbfead1 Deutsche Telekom AG Telekom Shop Offer Extension Telekom Shop Offer Extension DEV", output)
+        XCTAssertEqual("703ae630-7ac3-471e-8343-6a411eae0df8 KPN B.V. KPN SmartLife Today Extension KPN Smartlife Today Extension (distribution)", output)
     }
     
     func testExpirationDate() throws {
         let days = prettyprovision.daysToExpiration
-        XCTAssertEqual(-967, days)
+        XCTAssertEqual(87, days)
     }
     
     struct SecItemStructure {
@@ -174,12 +174,13 @@ class cgjprofileToolTests: XCTestCase {
         }
         
         var dc = DateComponents()
-        dc.year = 2016
-        dc.month = 1
-        dc.day = 8
-        dc.hour = 16
-        dc.minute = 54
-        dc.second = 40
+        dc.year = 2019
+        dc.month = 4
+        dc.day = 5
+        dc.hour = 13
+        dc.minute = 17
+        dc.second = 31
+        dc.timeZone = TimeZone(secondsFromGMT: 0)
         let testDate = Calendar.autoupdatingCurrent.date(from: dc)
         
         var enddate : Date!
@@ -219,42 +220,23 @@ class cgjprofileToolTests: XCTestCase {
     }
     
     func testCertificateName() throws {
-        if let cert = prettyprovision.DeveloperCertificates.first {
-            
-            let certName = try Mobileprovision.certificateDisplayName(cert)
-            
-            XCTAssertNotNil(certName)
-            
-            var keychainErr = noErr;
-            // Set up the keychain search dictionary:
-            var certificateQuery : [String: Any] = [:]
-            // This keychain item is a generic password.
-            certificateQuery[kSecClass as String] = kSecClassIdentity
-            certificateQuery[ kSecReturnRef as String] = kCFBooleanTrue
-            certificateQuery[kSecMatchLimit as String] = kSecMatchLimitAll
-            
-            //Initialize the dictionary used to hold return data from the keychain:
-            var outArray : AnyObject?
-            // If the keychain item exists, return the attributes of the item:
-            keychainErr = SecItemCopyMatching(certificateQuery as CFDictionary, &outArray)
-            XCTAssert(keychainErr == noErr)
-            let certArray = outArray as? [SecIdentity]
-            XCTAssertNotNil(certArray)
-            let first = certArray!.first!
-            var cert : SecCertificate?
-            var result = withUnsafeMutablePointer(to: &cert) { (c) -> OSStatus in
-                return SecIdentityCopyCertificate(first, c)
-            }
-            XCTAssert(result == noErr)
-            var cfString : CFString?
-            result = withUnsafeMutablePointer(to: &cfString) { (cfs) -> OSStatus in
-                return SecCertificateCopyCommonName(cert!, cfs)
-            }
-            XCTAssert(result == noErr)
-            print (cfString as String? ?? "SNIETZ")
-        }
-        else {
+        guard let provisionCertificate = prettyprovision.DeveloperCertificates.first else {
             XCTFail()
+            return
         }
+        
+        let certName = try provisionCertificate.certificateDisplayName()
+        XCTAssertNotNil(certName)
+        
+        let certIdenties = try Mobileprovision.identifyCertificates()
+        
+        let existingCert = certIdenties[certName]
+        XCTAssertNotNil(existingCert)
+    }
+    
+    func testIdentities() throws {
+        
+        let certIDs = try Mobileprovision.identifyCertificates()
+        XCTAssert(certIDs.count > 0)
     }
 }

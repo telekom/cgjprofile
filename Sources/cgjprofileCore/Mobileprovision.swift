@@ -28,10 +28,15 @@ import Foundation
 // https://opensource.apple.com/source/kext_tools/kext_tools-425.1.3/security.c
 
 let kSecOIDUserID          = "0.9.2342.19200300.100.1.1"
-let kSecOIDCommonName               = "2.5.4.3"
-let kSecOIDCountryName              = "2.5.4.6"
-let kSecOIDOriganziationName        = "2.5.4.10"
-let kSecOIDOrganizationalUnitName   = "2.5.4.11"
+let kSecOIDCommonName             = "2.5.4.3"
+let kSecOIDCountryName            = "2.5.4.6"
+let kSecOIDOriganziationName      = "2.5.4.10"
+let kSecOIDOrganizationalUnitName = "2.5.4.11"
+
+enum X509Error : Error {
+    case unableToDecodeItem
+    case unableToReadKeychain
+}
 
 public class Mobileprovision {
 
@@ -221,4 +226,41 @@ public class Mobileprovision {
 
 }
 
-
+extension SecCertificate {
+    func certificateDisplayName () throws -> String {
+        
+        var commonName : String = "-"
+        var organizationalUnit : String = "-"
+        var organization : String = "-"
+        
+        var error: Unmanaged<CFError>?
+        guard let info = SecCertificateCopyValues(self, [kSecOIDX509V1SubjectName, kSecOIDX509V1SubjectNameStd, kSecOIDX509V1SubjectNameCStruct] as CFArray, &error) as? [CFString:[CFString:Any]] else {
+            throw error!.takeRetainedValue() as Error
+        }
+        
+        guard let subjectName = info[kSecOIDX509V1SubjectName]?[kSecPropertyKeyValue] as? [[CFString : String]] else {
+            throw X509Error.unableToDecodeItem
+        }
+        
+        for item in subjectName {
+            
+            guard let value = item[kSecPropertyKeyValue] else {
+                throw X509Error.unableToDecodeItem
+            }
+            switch item[kSecPropertyKeyLabel] {
+            case kSecOIDCommonName:
+                commonName = value
+            case kSecOIDOriganziationName:
+                organization = value
+            case kSecOIDOrganizationalUnitName:
+                organizationalUnit = value
+            case kSecOIDUserID, kSecOIDCountryName:
+                continue
+            default:
+                continue
+            }
+        }
+        
+        return "\(commonName) \(organizationalUnit) \(organization)"
+    }
+}

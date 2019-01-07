@@ -95,7 +95,7 @@ public final class cgjprofileTool {
                         let date = try Mobileprovision.certificateEnddate(certificate)
                         let daysToExpiration = Mobileprovision.daysToExpiration(for: date)
                         
-                        let certName = try Mobileprovision.certificateDisplayName(certificate)
+                        let certName = try certificate.certificateDisplayName()
                         if daysToExpiration <= 0 {
                             let description = "\(ANSI_COLOR_YELLOW)WARNING: \(provision.UUID) \(provision.Name) certificate \(certName) is expired\(ANSI_COLOR_RESET)\n"
                             fputs(description, stderr)
