@@ -70,6 +70,9 @@ public final class cgjprofileTool {
         }
         let warnDays = parsedArguments.get(warningsOption)
         let quiet = parsedArguments.get(quietOption) ?? false
+        
+        let identifyCertificates = try Mobileprovision.identifyCertificates()
+        
         for url in workingPaths {
             if let provision = PrettyProvision(url: url) {
                 if !quiet {
@@ -89,22 +92,37 @@ public final class cgjprofileTool {
                     fputs(description, stderr)
                 }
                 
+                // Stop checking if the certificate is expired anyway
+                guard result == EXIT_SUCCESS else {
+                    continue
+                }
+                
                 var validCertificateFound = false
                 for certificate in provision.DeveloperCertificates {
                     do {
-                        let date = try certificate.enddate()
-                        let daysToExpiration = Mobileprovision.daysToExpiration(for: date)
                         
                         let certName = try certificate.displayName()
-                        if daysToExpiration <= 0 {
-                            let description = "\(ANSI_COLOR_YELLOW)WARNING: \(provision.UUID) \(provision.Name) certificate \(certName) is expired\(ANSI_COLOR_RESET)\n"
-                            fputs(description, stderr)
-                        } else {
-                            validCertificateFound = true
-                            if let warnDays = warnDays, daysToExpiration <= warnDays {
-                                let description = "\(ANSI_COLOR_YELLOW)WARNING: \(provision.UUID) certificate \(certName) will expire in \(daysToExpiration) days\(ANSI_COLOR_RESET)\n"
+                        if let exisitingCertificate = identifyCertificates[certName], exisitingCertificate == certificate {
+                            
+                            let date = try certificate.enddate()
+                            let daysToExpiration = Mobileprovision.daysToExpiration(for: date)
+                            
+                            if daysToExpiration <= 0 {
+                                let description = "\(ANSI_COLOR_YELLOW)WARNING: \(provision.UUID) \(provision.Name) certificate \(certName) is expired\(ANSI_COLOR_RESET)\n"
                                 fputs(description, stderr)
+                            } else {
+                                
+                                validCertificateFound = true
+                                
+                                if let warnDays = warnDays, daysToExpiration <= warnDays {
+                                    let description = "\(ANSI_COLOR_YELLOW)WARNING: \(provision.UUID) certificate \(certName) will expire in \(daysToExpiration) days\(ANSI_COLOR_RESET)\n"
+                                    fputs(description, stderr)
+                                }
                             }
+                        }
+                        else {
+                            let description = "\(ANSI_COLOR_YELLOW)WARNING: \(provision.UUID) \(provision.Name) certificate \(certName) is not present in keychain\(ANSI_COLOR_RESET)\n"
+                            fputs(description, stderr)
                         }
                     }
                     catch {
