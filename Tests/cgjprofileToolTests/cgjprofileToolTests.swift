@@ -1,3 +1,27 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) 2019 Deutsche Telekom AG
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 import Foundation
 import XCTest
 @testable import cgjprofileCore
@@ -149,51 +173,51 @@ class cgjprofileToolTests: XCTestCase {
             let secCert = SecCertificateCreateWithData(nil, cert as CFData)
             XCTAssertNotNil(secCert)
             
-            
-            var dc = DateComponents()
-            dc.year = 2016
-            dc.month = 1
-            dc.day = 8
-            dc.hour = 16
-            dc.minute = 54
-            dc.second = 40
-            let testDate = Calendar.autoupdatingCurrent.date(from: dc)
-            
-            var enddate : Date!
+        
+        var dc = DateComponents()
+        dc.year = 2016
+        dc.month = 1
+        dc.day = 8
+        dc.hour = 16
+        dc.minute = 54
+        dc.second = 40
+        let testDate = Calendar.autoupdatingCurrent.date(from: dc)
+        
+        var enddate : Date!
             XCTAssertNoThrow(enddate = try Mobileprovision.certificateEnddate(data: cert))
-
-            XCTAssertEqual(enddate, testDate)
-            var error: Unmanaged<CFError>?
+        
+        XCTAssertEqual(enddate, testDate)
+        var error: Unmanaged<CFError>?
             guard let dict = SecCertificateCopyValues(secCert!,[kSecOIDX509V1ValidityNotAfter] as CFArray,&error) else {
-                throw error!.takeRetainedValue() as Error
-            }
-            
-            if let info = dict as? [String:[String:Any]] {
-                for key in info.keys {
-                    if let item = info[key]
-                    {
-                        if let label = item[kSecPropertyKeyLabel as String] as? String, let localizedLabel = item[kSecPropertyKeyLocalizedLabel as String] as? String, let type = item[kSecPropertyKeyType as String] as? String, var value = item[kSecPropertyKeyValue as String] {
-                            
-                            if type == "section" || type == "data" {
-                                value = "** Something **"
-                            }
-                            if label == "Not Valid After", let interval = value as? NSNumber {
-                                let dInterval = interval.doubleValue
-                                let date = Date(timeIntervalSinceReferenceDate: dInterval)
-                                XCTAssertEqual(enddate, date)
-                                let df = DateFormatter()
-                                df.dateStyle = .medium
-                                df.timeStyle = .medium
-                                let dateString = df.string(from: date)
-                                value = dateString
-                            }
-                            
-                        print ("\(localizedLabel) (\(label)): \(value) (\(type))")
+            throw error!.takeRetainedValue() as Error
+        }
+        
+        if let info = dict as? [String:[String:Any]] {
+            for key in info.keys {
+                if let item = info[key]
+                {
+                    if let label = item[kSecPropertyKeyLabel as String] as? String, let localizedLabel = item[kSecPropertyKeyLocalizedLabel as String] as? String, let type = item[kSecPropertyKeyType as String] as? String, var value = item[kSecPropertyKeyValue as String] {
+                        
+                        if type == "section" || type == "data" {
+                            value = "** Something **"
                         }
+                        if label == "Not Valid After", let interval = value as? NSNumber {
+                            let dInterval = interval.doubleValue
+                            let date = Date(timeIntervalSinceReferenceDate: dInterval)
+                            XCTAssertEqual(enddate, date)
+                            let df = DateFormatter()
+                            df.dateStyle = .medium
+                            df.timeStyle = .medium
+                            let dateString = df.string(from: date)
+                            value = dateString
+                        }
+                        
+                        print ("\(localizedLabel) (\(label)): \(value) (\(type))")
                     }
                 }
             }
-                    }
+        }
+    }
         else {
             XCTFail()
         }
