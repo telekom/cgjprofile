@@ -89,24 +89,30 @@ public final class cgjprofileTool {
                     fputs(description, stderr)
                 }
                 
+                var validCertificateFound = false
                 for certificate in provision.DeveloperCertificates {
                     do {
-                        let date = try Mobileprovision.certificateEnddate(data: certificate)
+                        let date = try Mobileprovision.certificateEnddate(certificate)
                         let daysToExpiration = Mobileprovision.daysToExpiration(for: date)
                         
-                        let certName = try Mobileprovision.certificateDisplayName(data: certificate)
-                        if daysToExpiration <= 0 {
-                            let description = "\(ANSI_COLOR_RED)ERROR: \(provision.UUID) \(provision.Name) certificate \(certName) is expired\(ANSI_COLOR_RESET)\n"
-                            fputs(description, stderr)
-                            result = EXIT_FAILURE
-                        } else if let warnDays = warnDays, daysToExpiration <= warnDays {
+                        let certName = try Mobileprovision.certificateDisplayName(certificate)
+                        if daysToExpiration > 0 {
+                            validCertificateFound = true
+                            if let warnDays = warnDays, daysToExpiration <= warnDays {
                                 let description = "\(ANSI_COLOR_YELLOW)WARNING: \(provision.UUID) certificate \(certName) will expire in \(daysToExpiration) days\(ANSI_COLOR_RESET)\n"
                                 fputs(description, stderr)
                             }
                         }
+                    }
                     catch {
                         throw error
                     }
+                }
+                if !validCertificateFound {
+                    result = EXIT_FAILURE
+                    let description = "\(ANSI_COLOR_RED)ERROR: \(provision.UUID) \(provision.Name) No valid certificates found\(ANSI_COLOR_RESET)\n"
+                    fputs(description, stderr)
+
                 }
             }
             else {
