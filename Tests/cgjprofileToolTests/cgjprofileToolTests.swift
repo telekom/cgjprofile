@@ -164,7 +164,7 @@ class cgjprofileToolTests: XCTestCase {
 
             XCTAssertEqual(enddate, testDate)
             var error: Unmanaged<CFError>?
-            guard let dict = SecCertificateCopyValues(secCert!,nil,&error) else {
+            guard let dict = SecCertificateCopyValues(secCert!,[kSecOIDX509V1ValidityNotAfter] as CFArray,&error) else {
                 throw error!.takeRetainedValue() as Error
             }
             
@@ -201,7 +201,9 @@ class cgjprofileToolTests: XCTestCase {
     
     func testCertificateName() throws {
         if let cert = prettyprovision.DeveloperCertificates.first {
-            let certName = Mobileprovision.decodeX509(data: cert)
+            
+            let certName = try Mobileprovision.certificateDisplayName(data: cert)
+            
             XCTAssertNotNil(certName)
             
             var keychainErr = noErr;

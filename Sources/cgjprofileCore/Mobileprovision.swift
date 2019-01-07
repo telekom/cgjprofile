@@ -1,5 +1,14 @@
 import Foundation
 
+// There do not seem to be constants anywere in xOS:
+// https://opensource.apple.com/source/kext_tools/kext_tools-425.1.3/security.c
+
+let kSecOIDUserID          = "0.9.2342.19200300.100.1.1"
+let kSecOIDCommonName               = "2.5.4.3"
+let kSecOIDCountryName              = "2.5.4.6"
+let kSecOIDOriganziationName        = "2.5.4.10"
+let kSecOIDOrganizationalUnitName   = "2.5.4.11"
+
 public class Mobileprovision {
 
     enum CMSError : Error {
@@ -98,92 +107,69 @@ public class Mobileprovision {
 
     }
     
-    enum X509Info {
-        case subject
-        case text
-        case enddate
-    }
-    
     enum X509Error : Error {
         case unableToDecodeItem
     }
     
-    static func certificateDisplayName (data: Data) -> String {
-        let string = self.decodeX509(data: data, info: .subject) // Similar
-        // "subject= /UID=PSCLSRMK6B/CN=iPhone Developer: Hansjoachim Lunze (Q42TB976Y7)/OU=C66ZVPVD5D/O=Deutsche Telekom AG/C=DE\n"
+    static func certificateDisplayName (data: Data) throws -> String {
         
         var commonName : String = "-"
         var organizationalUnit : String = "-"
         var organization : String = "-"
         
-        for item in string.components(separatedBy: "/") { // Different
-            let keyValue = item.split(around: "=") // Same
-            if let value = keyValue.1 { // Different
-                switch keyValue.0 {
-                case "CN":
+        guard let certificate = SecCertificateCreateWithData(nil, data as CFData) else {
+            throw X509Error.unableToDecodeItem
+        }
+        
+        var error: Unmanaged<CFError>?
+        guard let info = SecCertificateCopyValues(certificate, [kSecOIDX509V1SubjectName, kSecOIDX509V1SubjectNameStd, kSecOIDX509V1SubjectNameCStruct] as CFArray, &error) as? [CFString:[CFString:Any]] else {
+            throw error!.takeRetainedValue() as Error
+        }
+        
+        guard let subjectName = info[kSecOIDX509V1SubjectName]?[kSecPropertyKeyValue] as? [[CFString : String]] else {
+            throw X509Error.unableToDecodeItem
+        }
+        
+        for item in subjectName {
+            
+            guard let value = item[kSecPropertyKeyValue] else {
+                throw X509Error.unableToDecodeItem
+            }
+            switch item[kSecPropertyKeyLabel] {
+                case kSecOIDCommonName:
                     commonName = value
-                case "OU":
-                    organizationalUnit = value
-                case "O":
+                case kSecOIDOriganziationName:
                     organization = value
+                case kSecOIDOrganizationalUnitName:
+                    organizationalUnit = value
+                case kSecOIDUserID, kSecOIDCountryName:
+                    continue
                 default:
                     continue
                 }
-            }
         }
+        
         return "\(commonName) \(organizationalUnit) \(organization)"
     }
     
     static func certificateEnddate (data: Data) throws -> Date {
         
-//        if let certificate = SecCertificateCreateWithData(nil, data as CFData) {
-//        
-//            var error: Unmanaged<CFError>?
-//        guard let dict = SecCertificateCopyValues(certificate, nil, &error) else {
-//            throw error!.takeRetainedValue() as Error
-//        }
-
-        let string = self.decodeX509(data: data, info: .enddate)
-        let item = string.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-        let keyValue = item.split(around: "=")
-        if keyValue.0 == "notAfter", let dateString = keyValue.1 {
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "MMM d HH:mm:ss yyyy zzz"
-            dateFormatter.locale = Locale.init(identifier: "en_US_POSIX")
-            if let date = dateFormatter.date(from: dateString) {
-                return date
-            }
+        guard let certificate = SecCertificateCreateWithData(nil, data as CFData) else {
+            throw X509Error.unableToDecodeItem
         }
-        throw X509Error.unableToDecodeItem
-    }
-    
-    static func decodeX509 (data: Data, info: X509Info = .subject) -> String {
         
-        var typeArgument = "-"
-        switch info {
-        case .subject:
-            typeArgument.append("subject")
-        case .text:
-            typeArgument.append("text")
-        case .enddate:
-            typeArgument.append("enddate")
+        var error: Unmanaged<CFError>?
+        guard let info = SecCertificateCopyValues(certificate, [kSecOIDX509V1ValidityNotAfter] as CFArray, &error) as? [CFString:[CFString:Any]] else {
+            throw error!.takeRetainedValue() as Error
         }
-        var outstr = ""
-        let task = Process()
-        task.launchPath = "/usr/bin/openssl"
-        task.arguments = ["x509", "-noout", "-inform", "DER", typeArgument]
-        let outPipe = Pipe()
-        task.standardOutput = outPipe
-        let inPipe = Pipe()
-        task.standardInput = inPipe
-        task.launch()
-        inPipe.fileHandleForWriting.write(data)
-        let data = outPipe.fileHandleForReading.readDataToEndOfFile()
-        if let output = NSString(data: data, encoding: String.Encoding.utf8.rawValue) {
-            outstr = output as String
+        
+        guard let value = info[kSecOIDX509V1ValidityNotAfter]?[kSecPropertyKeyValue] as? NSNumber else {
+            throw X509Error.unableToDecodeItem
         }
-        task.waitUntilExit()
-        return outstr.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+        
+        let date = Date(timeIntervalSinceReferenceDate: value.doubleValue)
+        
+        return date
     }
     
     public static func decodeCMS (data : Data) throws -> Data {
