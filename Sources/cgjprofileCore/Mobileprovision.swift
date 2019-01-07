@@ -86,18 +86,92 @@ public class Mobileprovision {
     
     public var daysToExpiration : Int {
         get {
-            let cal = Calendar.current
             let expDate = self.ExpirationDate
-            let components = cal.dateComponents([Calendar.Component.day], from: Date(), to: expDate)
-            return components.day ?? 0
+            return Mobileprovision.daysToExpiration(for: expDate)
         }
     }
     
-    static func decodeX509 (data: Data) -> String {
+    public static func daysToExpiration(for expDate : Date) -> Int {
+        let cal = Calendar.current
+        let components = cal.dateComponents([Calendar.Component.day], from: Date(), to: expDate)
+        return components.day ?? 0
+
+    }
+    
+    enum X509Info {
+        case subject
+        case text
+        case enddate
+    }
+    
+    enum X509Error : Error {
+        case unableToDecodeItem
+    }
+    
+    static func certificateDisplayName (data: Data) -> String {
+        let string = self.decodeX509(data: data, info: .subject) // Similar
+        // "subject= /UID=PSCLSRMK6B/CN=iPhone Developer: Hansjoachim Lunze (Q42TB976Y7)/OU=C66ZVPVD5D/O=Deutsche Telekom AG/C=DE\n"
+        
+        var commonName : String = "-"
+        var organizationalUnit : String = "-"
+        var organization : String = "-"
+        
+        for item in string.components(separatedBy: "/") { // Different
+            let keyValue = item.split(around: "=") // Same
+            if let value = keyValue.1 { // Different
+                switch keyValue.0 {
+                case "CN":
+                    commonName = value
+                case "OU":
+                    organizationalUnit = value
+                case "O":
+                    organization = value
+                default:
+                    continue
+                }
+            }
+        }
+        return "\(commonName) \(organizationalUnit) \(organization)"
+    }
+    
+    static func certificateEnddate (data: Data) throws -> Date {
+        
+//        if let certificate = SecCertificateCreateWithData(nil, data as CFData) {
+//        
+//            var error: Unmanaged<CFError>?
+//        guard let dict = SecCertificateCopyValues(certificate, nil, &error) else {
+//            throw error!.takeRetainedValue() as Error
+//        }
+
+        let string = self.decodeX509(data: data, info: .enddate)
+        let item = string.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+        let keyValue = item.split(around: "=")
+        if keyValue.0 == "notAfter", let dateString = keyValue.1 {
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "MMM d HH:mm:ss yyyy zzz"
+            dateFormatter.locale = Locale.init(identifier: "en_US_POSIX")
+            if let date = dateFormatter.date(from: dateString) {
+                return date
+            }
+        }
+        throw X509Error.unableToDecodeItem
+    }
+    
+    static func decodeX509 (data: Data, info: X509Info = .subject) -> String {
+        
+        var typeArgument = "-"
+        switch info {
+        case .subject:
+            typeArgument.append("subject")
+        case .text:
+            typeArgument.append("text")
+        case .enddate:
+            typeArgument.append("enddate")
+        }
         var outstr = ""
         let task = Process()
         task.launchPath = "/usr/bin/openssl"
-        task.arguments = ["x509", "-noout", "-inform", "DER", "-subject"]
+        task.arguments = ["x509", "-noout", "-inform", "DER", typeArgument]
         let outPipe = Pipe()
         task.standardOutput = outPipe
         let inPipe = Pipe()
@@ -109,7 +183,7 @@ public class Mobileprovision {
             outstr = output as String
         }
         task.waitUntilExit()
-        return outstr
+        return outstr.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
     }
     
     public static func decodeCMS (data : Data) throws -> Data {

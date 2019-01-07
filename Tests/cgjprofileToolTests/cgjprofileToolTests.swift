@@ -14,10 +14,10 @@ class cgjprofileToolTests: XCTestCase {
         super.setUp()
         url = URL(string: "file:///Users/below/Library/MobileDevice/Provisioning%20Profiles/351d20ea-a4c6-4e3d-ad00-1e275cbfead1.mobileprovision")
         provisionData = try! Data(contentsOf: url)
-        let decodedProvision = try! cgjprofileTool.decodeCMS(data:provisionData)
-        let plist = try! cgjprofileTool.decodePlist (data: decodedProvision)
-        mobileprovision = Mobileprovision(plist)
-        prettyprovision = PrettyProvision(mobileprovision)
+        let decodedProvision = try! Mobileprovision.decodeCMS(data:provisionData)
+        let plist = try! Mobileprovision.decodePlist (data: decodedProvision)
+        mobileprovision = PrettyProvision(plist)
+        prettyprovision = mobileprovision as? PrettyProvision
         
     }
     override func tearDown() {
@@ -133,6 +133,107 @@ class cgjprofileToolTests: XCTestCase {
     
     func testExpirationDate() throws {
         let days = prettyprovision.daysToExpiration
-        XCTAssertEqual(-950, days)
+        XCTAssertEqual(-967, days)
+    }
+    
+    struct SecItemStructure {
+        var localizedLabel : String // "localized label"
+        var value : Any
+        var type : String
+        var label : String
+    }
+    
+    func testCertificateEndDate() throws {
+        if let cert = prettyprovision.DeveloperCertificates.first {
+            
+            let secCert = SecCertificateCreateWithData(nil, cert as CFData)
+            XCTAssertNotNil(secCert)
+            
+            
+            var dc = DateComponents()
+            dc.year = 2016
+            dc.month = 1
+            dc.day = 8
+            dc.hour = 16
+            dc.minute = 54
+            dc.second = 40
+            let testDate = Calendar.autoupdatingCurrent.date(from: dc)
+            
+            var enddate : Date!
+            XCTAssertNoThrow(enddate = try Mobileprovision.certificateEnddate(data: cert))
+
+            XCTAssertEqual(enddate, testDate)
+            var error: Unmanaged<CFError>?
+            guard let dict = SecCertificateCopyValues(secCert!,nil,&error) else {
+                throw error!.takeRetainedValue() as Error
+            }
+            
+            if let info = dict as? [String:[String:Any]] {
+                for key in info.keys {
+                    if let item = info[key]
+                    {
+                        if let label = item[kSecPropertyKeyLabel as String] as? String, let localizedLabel = item[kSecPropertyKeyLocalizedLabel as String] as? String, let type = item[kSecPropertyKeyType as String] as? String, var value = item[kSecPropertyKeyValue as String] {
+                            
+                            if type == "section" || type == "data" {
+                                value = "** Something **"
+                            }
+                            if label == "Not Valid After", let interval = value as? NSNumber {
+                                let dInterval = interval.doubleValue
+                                let date = Date(timeIntervalSinceReferenceDate: dInterval)
+                                XCTAssertEqual(enddate, date)
+                                let df = DateFormatter()
+                                df.dateStyle = .medium
+                                df.timeStyle = .medium
+                                let dateString = df.string(from: date)
+                                value = dateString
+                            }
+                            
+                        print ("\(localizedLabel) (\(label)): \(value) (\(type))")
+                        }
+                    }
+                }
+            }
+                    }
+        else {
+            XCTFail()
+        }
+    }
+    
+    func testCertificateName() throws {
+        if let cert = prettyprovision.DeveloperCertificates.first {
+            let certName = Mobileprovision.decodeX509(data: cert)
+            XCTAssertNotNil(certName)
+            
+            var keychainErr = noErr;
+            // Set up the keychain search dictionary:
+            var certificateQuery : [String: Any] = [:]
+            // This keychain item is a generic password.
+            certificateQuery[kSecClass as String] = kSecClassIdentity
+            certificateQuery[ kSecReturnRef as String] = kCFBooleanTrue
+            certificateQuery[kSecMatchLimit as String] = kSecMatchLimitAll
+            
+            //Initialize the dictionary used to hold return data from the keychain:
+            var outArray : AnyObject?
+            // If the keychain item exists, return the attributes of the item:
+            keychainErr = SecItemCopyMatching(certificateQuery as CFDictionary, &outArray)
+            XCTAssert(keychainErr == noErr)
+            let certArray = outArray as? [SecIdentity]
+            XCTAssertNotNil(certArray)
+            let first = certArray!.first!
+            var cert : SecCertificate?
+            var result = withUnsafeMutablePointer(to: &cert) { (c) -> OSStatus in
+                return SecIdentityCopyCertificate(first, c)
+            }
+            XCTAssert(result == noErr)
+            var cfString : CFString?
+            result = withUnsafeMutablePointer(to: &cfString) { (cfs) -> OSStatus in
+                return SecCertificateCopyCommonName(cert!, cfs)
+            }
+            XCTAssert(result == noErr)
+            print (cfString as String? ?? "SNIETZ")
+        }
+        else {
+            XCTFail()
+        }
     }
 }
