@@ -15,27 +15,39 @@ import Darwin
 public final class cgjprofileTool {
     private let arguments: [String]
 
+    
     public init(arguments: [String] = CommandLine.arguments) { 
         self.arguments = Array(arguments.dropFirst()) // Don't include the command name
     }
     
-    var mobileProvisionURL : Foundation.URL = {
+    static var mobileProvisionURL : Foundation.URL = {
         let fm = FileManager.default
         let librayURL = fm.urls(for: .libraryDirectory, in: .userDomainMask).first!
         return librayURL.appendingPathComponent("MobileDevice/Provisioning Profiles")
     }()
+    static let mobileprovisionExtension = "mobileprovision"
+
+    static func profilePaths (paths : [String]? = nil) -> [String] {
+        
+        let urls = try! FileManager.default.contentsOfDirectory(at: self.mobileProvisionURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles, .skipsPackageDescendants, .skipsSubdirectoryDescendants])
+        return urls.map({ (url) -> String in
+            url.path
+        })
+    }
     
-    // No clue why I have to specify Foundation here
-    func workingURLs (paths : [String]? = nil) -> [Foundation.URL] {
-        if let paths = paths {
-            return paths.map {
-                URL(fileURLWithPath: $0)
-            }
+    static func profileURL (path : String) throws -> Foundation.URL {
+        let fm = FileManager.default
+        var url : Foundation.URL! = URL(fileURLWithPath: path)
+        if !fm.fileExists(atPath: url.path) {
+            url = mobileProvisionURL.appendingPathComponent(path)
         }
-        else {
-            
-            return try! FileManager.default.contentsOfDirectory(at: self.mobileProvisionURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles, .skipsPackageDescendants, .skipsSubdirectoryDescendants])
+        if !fm.fileExists(atPath: url.path) {
+            url = url.appendingPathExtension(mobileprovisionExtension)
         }
+        if !fm.fileExists(atPath: url.path) {
+            throw NSError(domain: NSCocoaErrorDomain, code: NSFileNoSuchFileError, userInfo: [NSFilePathErrorKey:path])
+        }
+        return url
     }
     
     public func run() throws -> Int32 {
@@ -47,11 +59,14 @@ public final class cgjprofileTool {
         let formatOption: OptionArgument<String> = parser.add(option: "--format", shortName: "-f", kind: String.self, usage: "Optional format String\n      %e  ExpirationDate\n      %c  CreationDate\n      %u  UUID\n      %a  AppIDName\n      %t  TeamName\n      %n  Name")
         let warningsOption: OptionArgument<Int> = parser.add(option: "--warnExpiration", shortName: "-w", kind: Int.self, usage: "Set days to warn about expiration")
         let quietOption: OptionArgument<Bool> = parser.add(option: "--quiet", shortName: "-q", kind: Bool.self, usage: "Don't print any output")
-        let pathsOption = parser.add(positional: "path", kind: [String].self, optional:true, usage:"Optional paths to mobileprovision files")
+        let pathsOption = parser.add(positional: "path", kind: [String].self, optional:true, usage:"Optional paths to, or UDIDs of, mobileprovision files")
 
         let parsedArguments = try parser.parse(arguments)
         
-        let workingPaths = workingURLs(paths: parsedArguments.get(pathsOption))
+        var workingPaths : [String]! = parsedArguments.get(pathsOption)
+        if workingPaths == nil {
+            workingPaths = cgjprofileTool.profilePaths()
+        }
         var format : String!
         format = parsedArguments.get(formatOption)
         if format == nil {
@@ -62,7 +77,11 @@ public final class cgjprofileTool {
         
         let identifyCertificates = try Mobileprovision.identifyCertificates()
         
-        for url in workingPaths {
+        for path in workingPaths {
+            var url : Foundation.URL! = URL(fileURLWithPath: path)
+            if url == nil {
+                url = cgjprofileTool.mobileProvisionURL.appendingPathComponent(path)
+            }
             if let provision = PrettyProvision(url: url) {
                 if !quiet {
                     provision.print(format: format, warnDays:warnDays)
@@ -126,7 +145,7 @@ public final class cgjprofileTool {
                 }
             }
             else {
-                let output = "Error decoding \(url)\n"
+                let output = "Error decoding \(url?.absoluteString ?? "No URL")\n"
                 fputs(output, stderr)
             }
         }

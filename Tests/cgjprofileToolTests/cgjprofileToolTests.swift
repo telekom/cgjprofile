@@ -19,9 +19,11 @@ class cgjprofileToolTests: XCTestCase {
     var mobileprovision : Mobileprovision!
     var prettyprovision : PrettyProvision!
     
+    let profileUUID = "703ae630-7ac3-471e-8343-6a411eae0df8"
+    
     override func setUp() {
         super.setUp()
-        url = URL(string: "file:///Users/below/Library/MobileDevice/Provisioning%20Profiles/703ae630-7ac3-471e-8343-6a411eae0df8.mobileprovision")
+        url = URL(string: "file:///Users/below/Library/MobileDevice/Provisioning%20Profiles/\(profileUUID).mobileprovision")
         provisionData = try! Data(contentsOf: url)
         let decodedProvision = try! Mobileprovision.decodeCMS(data:provisionData)
         let plist = try! Mobileprovision.decodePlist (data: decodedProvision)
@@ -122,12 +124,19 @@ class cgjprofileToolTests: XCTestCase {
 
     }
     func testWorkingURLsPath() throws {
-        let urls = cgjprofileTool().workingURLs (paths:["/Users/below/Library/MobileDevice/Provisioning Profiles/351d20ea-a4c6-4e3d-ad00-1e275cbfead1.mobileprovision"])
-        XCTAssertEqual(1, urls.count)
+        let url = try cgjprofileTool.profileURL (path: "/Users/below/Library/MobileDevice/Provisioning Profiles/\(profileUUID).mobileprovision")
+        XCTAssertNotNil(url)
+    }
+    
+    func testURLforUDID () throws {
+        let url = try cgjprofileTool.profileURL(path: profileUUID)
+        XCTAssertNotNil(url)
+        let data = try Data(contentsOf: url)
+        XCTAssertNotNil(data)
     }
     
     func testMobileProvisionDir() throws {
-        let urls = cgjprofileTool().workingURLs()
+        let urls = cgjprofileTool.profilePaths()
         XCTAssert(urls.count != 0)
     }
     
@@ -142,7 +151,7 @@ class cgjprofileToolTests: XCTestCase {
     
     func testExpirationDate() throws {
         let days = prettyprovision.daysToExpiration
-        XCTAssertEqual(87, days)
+        XCTAssertEqual(86, days)
     }
     
     struct SecItemStructure {
