@@ -19,6 +19,12 @@ public final class cgjprofileTool {
         self.arguments = Array(arguments.dropFirst()) // Don't include the command name
     }
     
+    var mobileProvisionURL : Foundation.URL = {
+        let fm = FileManager.default
+        let librayURL = fm.urls(for: .libraryDirectory, in: .userDomainMask).first!
+        return librayURL.appendingPathComponent("MobileDevice/Provisioning Profiles")
+    }()
+    
     // No clue why I have to specify Foundation here
     func workingURLs (paths : [String]? = nil) -> [Foundation.URL] {
         if let paths = paths {
@@ -27,10 +33,8 @@ public final class cgjprofileTool {
             }
         }
         else {
-            let fm = FileManager.default
-            let librayURL = fm.urls(for: .libraryDirectory, in: .userDomainMask).first!
-            let profilesURL = librayURL.appendingPathComponent("MobileDevice/Provisioning Profiles")
-            return try! FileManager.default.contentsOfDirectory(at: profilesURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles, .skipsPackageDescendants, .skipsSubdirectoryDescendants])
+            
+            return try! FileManager.default.contentsOfDirectory(at: self.mobileProvisionURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles, .skipsPackageDescendants, .skipsSubdirectoryDescendants])
         }
     }
     
