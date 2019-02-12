@@ -137,7 +137,7 @@ public final class cgjprofileTool {
     
     public func run() throws -> Int32 {
         
-        let parser = ArgumentParser(usage: "[--format=\"format string\" [path]", overview: "Lists all mobileprovision files, or a single one")
+        let parser = ArgumentParser(usage: "[--format=\"format string\"] [--warn-expiration days] [--quiet] [path]", overview: "Lists all mobileprovision files, or a single one")
         
         let formatOption: OptionArgument<String> = parser.add(option: "--format", shortName: "-f", kind: String.self, usage: "Optional format String\n      %e  ExpirationDate\n      %c  CreationDate\n      %u  UUID\n      %a  AppIDName\n      %t  TeamName\n      %n  Name")
         let warningsOption: OptionArgument<Int> = parser.add(option: "--warnExpiration", shortName: "-w", kind: Int.self, usage: "Set days to warn about expiration")
