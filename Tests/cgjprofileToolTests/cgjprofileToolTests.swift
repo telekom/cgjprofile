@@ -120,7 +120,7 @@ class cgjprofileToolTests: XCTestCase {
     func testComplexFormat() throws {
         let format = "%u %t %t"
         let output = prettyprovision.parsedOutput(format)
-        XCTAssertEqual("703ae630-7ac3-471e-8343-6a411eae0df8 KPN B.V. KPN B.V.", output)
+        XCTAssertEqual("703ae630-7ac3-471e-8343-6a411eae0df8 Something Something", output)
 
     }
     func testWorkingURLsPath() throws {
@@ -146,7 +146,7 @@ class cgjprofileToolTests: XCTestCase {
     
     func testDefaultFormat() throws {
         let output = prettyprovision.parsedOutput("%u %t %a %n")
-        XCTAssertEqual("703ae630-7ac3-471e-8343-6a411eae0df8 KPN B.V. KPN SmartLife Today Extension KPN Smartlife Today Extension (distribution)", output)
+        XCTAssertEqual("703ae630-7ac3-471e-8343-6a411eae0df8 Something Something Something", output)
     }
     
     func testExpirationDate() throws {
