@@ -1,0 +1,5 @@
+cgjprofile : command line tool for macOS to analyze the validity of mobile provisions files.
+Copyright (c) 2019 Alxander von Below, Deutsche Telekom AG
+contact: opensource@telekom.de
+This files is distributed under the terms of the MIT license.
+For details see the file LICENSE on the toplevel.
