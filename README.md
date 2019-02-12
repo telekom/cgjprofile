@@ -14,7 +14,7 @@ For more information, see the [Package Manager documentation](https://swift.org/
 
 Once built, the tool can be invoked like this:
 
-`cgjprofile [--format=\"format string\"] [--warn-expiration days] [--quiet] [path]`
+`cgjprofile [--format="format string"] [--warn-expiration days] [--quiet] [path]`
 
 ### The Format String
 
