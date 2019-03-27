@@ -9,7 +9,7 @@
 
 import Foundation
 import Security
-import Utility
+import SPMUtility
 import Darwin
 
 public final class cgjprofileTool {
