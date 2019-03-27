@@ -99,7 +99,7 @@ public class PrettyProvision : Mobileprovision {
     func value(forFormat input: Character) -> String {
         switch input {
         case "e":
-            var output = formatter.string(from: self.ExpirationDate)
+            var output = formatter.string(from: self.expirationDate)
             if markExpired {
                 let days = self.daysToExpiration
                 let ANSI_COLOR_RED = "\u{001b}[31m"
@@ -118,15 +118,15 @@ public class PrettyProvision : Mobileprovision {
             }
             return output
         case "c":
-            return formatter.string(from: self.CreationDate)
+            return formatter.string(from: self.creationDate)
         case "u":
-            return self.UUID
+            return self.uuid
         case "a":
-            return self.AppIDName
+            return self.appIDName
         case "t":
-            return self.TeamName
+            return self.teamName
         case "n":
-            return self.Name
+            return self.name
         default:
             return ""
         }
