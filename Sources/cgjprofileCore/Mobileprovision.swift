@@ -32,60 +32,60 @@ public class Mobileprovision {
         case copyContent
     }
 
-    var Name : String
-    var ExpirationDate : Date
-    var Entitlements : [String:Any]
-    var CreationDate : Date
-    var AppIDName : String
-    var UUID : String
-    var TeamName : String
-    var Platform : [String]?
-    var ApplicationIdentifierPrefix : [String]
-    var DeveloperCertificates : [SecCertificate]
-    var TeamIdentifier : [String]
-    var TimeToLive : Int
-    var Version : Int
+    var name : String
+    var expirationDate : Date
+    var entitlements : [String:Any]
+    var creationDate : Date
+    var appIDName : String
+    var uuid : String
+    var teamName : String
+    var platform : [String]?
+    var applicationIdentifierPrefix : [String]
+    var developerCertificates : [SecCertificate]
+    var teamIdentifier : [String]
+    var timeToLive : Int
+    var version : Int
     
     public init? (_ plist : [String:Any]) {
-        guard let uuid = plist["UUID"] as? String else { return nil }
-        UUID = uuid
+        guard let uuidvalue = plist["UUID"] as? String else { return nil }
+        uuid = uuidvalue
         
-        guard let expirationDate = plist["ExpirationDate"] as? Date else { return nil }
-        ExpirationDate = expirationDate
+        guard let expDatevalue = plist["ExpirationDate"] as? Date else { return nil }
+        expirationDate = expDatevalue
         
-        if let entitlements = plist["Entitlements"] as? [String:Any] {
-            Entitlements = entitlements
+        if let value = plist["Entitlements"] as? [String:Any] {
+            entitlements = value
         } else { return nil}
-        if let creationDate = plist["CreationDate"] as? Date {
-            CreationDate = creationDate
+        if let value = plist["CreationDate"] as? Date {
+            creationDate = value
         } else { return nil}
-        if let appIDName = plist["AppIDName"] as? String {
-            AppIDName = appIDName
+        if let value = plist["AppIDName"] as? String {
+            appIDName = value
         } else { return nil}
-        if let teamName = plist["TeamName"] as? String {
-            TeamName = teamName
+        if let value = plist["TeamName"] as? String {
+            teamName = value
         } else { return nil}
-        if let applicationIdentifierPrefix = plist["ApplicationIdentifierPrefix"] as? [String] {
-            ApplicationIdentifierPrefix = applicationIdentifierPrefix
+        if let value = plist["ApplicationIdentifierPrefix"] as? [String] {
+            applicationIdentifierPrefix = value
         } else { return nil}
         if let certdata = plist["DeveloperCertificates"] as? [Data] {
             // openssl x509 -noout -inform DER -subject
-            DeveloperCertificates = certdata.compactMap({ (data) -> SecCertificate? in
+            developerCertificates = certdata.compactMap({ (data) -> SecCertificate? in
                 let certificate = SecCertificateCreateWithData(nil, data as CFData)
                 return certificate
             })
         } else { return nil}
-        if let teamIdentifier = plist["TeamIdentifier"] as? [String] {
-            TeamIdentifier = teamIdentifier
+        if let value = plist["TeamIdentifier"] as? [String] {
+            teamIdentifier = value
         } else { return nil}
-        if let ttl = plist["TimeToLive"] as? Int {
-            TimeToLive = ttl
+        if let value = plist["TimeToLive"] as? Int {
+            timeToLive = value
         } else { return nil}
-        if let version = plist["Version"] as? Int {
-            Version = version
+        if let value = plist["Version"] as? Int {
+            version = value
         } else { return nil}
-        Platform = plist["Platform"] as? [String]
-        Name = plist["Name"] as! String
+        platform = plist["Platform"] as? [String]
+        name = plist["Name"] as! String
     }
     
     // No clue why I must specify Foundation
@@ -112,7 +112,7 @@ public class Mobileprovision {
     
     public var daysToExpiration : Int {
         get {
-            let expDate = self.ExpirationDate
+            let expDate = self.expirationDate
             return Mobileprovision.daysToExpiration(for: expDate)
         }
     }

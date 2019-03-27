@@ -9,7 +9,7 @@
 
 import Foundation
 import Security
-import Utility
+import SPMUtility
 import Darwin
 
 public final class cgjprofileTool {
@@ -75,11 +75,11 @@ public final class cgjprofileTool {
                 let daysToExpiration = provision.daysToExpiration
                 if daysToExpiration <= 0 {
                     
-                    let description = "\(ANSI_COLOR_RED)ERROR: \(provision.UUID) \(provision.Name) is expired\(ANSI_COLOR_RESET)\n"
+                    let description = "\(ANSI_COLOR_RED)ERROR: \(provision.uuid) \(provision.name) is expired\(ANSI_COLOR_RESET)\n"
                     fputs(description, stderr)
                     result = EXIT_FAILURE
                 } else if let warnDays = warnDays, daysToExpiration <= warnDays {
-                    let description = "\(ANSI_COLOR_YELLOW)WARNING: \(provision.UUID) will expire in \(daysToExpiration) days\(ANSI_COLOR_RESET)\n"
+                    let description = "\(ANSI_COLOR_YELLOW)WARNING: \(provision.uuid) will expire in \(daysToExpiration) days\(ANSI_COLOR_RESET)\n"
                     fputs(description, stderr)
                 }
                 
@@ -89,7 +89,7 @@ public final class cgjprofileTool {
                 }
                 
                 var validCertificateFound = false
-                for certificate in provision.DeveloperCertificates {
+                for certificate in provision.developerCertificates {
                     do {
                         
                         let certName = try certificate.displayName()
@@ -99,20 +99,20 @@ public final class cgjprofileTool {
                             let daysToExpiration = Mobileprovision.daysToExpiration(for: date)
                             
                             if daysToExpiration <= 0 {
-                                let description = "\(ANSI_COLOR_YELLOW)WARNING: \(provision.UUID) \(provision.Name) certificate \(certName) is expired\(ANSI_COLOR_RESET)\n"
+                                let description = "\(ANSI_COLOR_YELLOW)WARNING: \(provision.uuid) \(provision.name) certificate \(certName) is expired\(ANSI_COLOR_RESET)\n"
                                 fputs(description, stderr)
                             } else {
                                 
                                 validCertificateFound = true
                                 
                                 if let warnDays = warnDays, daysToExpiration <= warnDays {
-                                    let description = "\(ANSI_COLOR_YELLOW)WARNING: \(provision.UUID) certificate \(certName) will expire in \(daysToExpiration) days\(ANSI_COLOR_RESET)\n"
+                                    let description = "\(ANSI_COLOR_YELLOW)WARNING: \(provision.uuid) certificate \(certName) will expire in \(daysToExpiration) days\(ANSI_COLOR_RESET)\n"
                                     fputs(description, stderr)
                                 }
                             }
                         }
                         else {
-                            let description = "\(ANSI_COLOR_YELLOW)WARNING: \(provision.UUID) \(provision.Name) certificate \(certName) is not present in keychain\(ANSI_COLOR_RESET)\n"
+                            let description = "\(ANSI_COLOR_YELLOW)WARNING: \(provision.uuid) \(provision.name) certificate \(certName) is not present in keychain\(ANSI_COLOR_RESET)\n"
                             fputs(description, stderr)
                         }
                     }
@@ -122,7 +122,7 @@ public final class cgjprofileTool {
                 }
                 if !validCertificateFound {
                     result = EXIT_FAILURE
-                    let description = "\(ANSI_COLOR_RED)ERROR: \(provision.UUID) \(provision.Name) No valid certificates found\(ANSI_COLOR_RESET)\n"
+                    let description = "\(ANSI_COLOR_RED)ERROR: \(provision.uuid) \(provision.name) No valid certificates found\(ANSI_COLOR_RESET)\n"
                     fputs(description, stderr)
                     
                 }

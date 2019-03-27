@@ -11,7 +11,7 @@ import Foundation
 import XCTest
 @testable import cgjprofileCore
 
-class cgjprofileToolTests: XCTestCase {
+class CgjprofileToolTests: XCTestCase {
     
     var provisionData : Data!
     var url : URL!
@@ -151,7 +151,7 @@ class cgjprofileToolTests: XCTestCase {
     
     func testExpirationDate() throws {
         let days = prettyprovision.daysToExpiration
-        XCTAssertEqual(86, days)
+        XCTAssertEqual(9, days)
     }
     
     struct SecItemStructure {
@@ -162,7 +162,7 @@ class cgjprofileToolTests: XCTestCase {
     }
     
     func testCertificateEndDate() throws {
-        guard let cert = prettyprovision.DeveloperCertificates.first else {
+        guard let cert = prettyprovision.developerCertificates.first else {
             XCTFail()
             return
         }
@@ -214,7 +214,7 @@ class cgjprofileToolTests: XCTestCase {
     }
     
     func testCertificateName() throws {
-        guard let provisionCertificate = prettyprovision.DeveloperCertificates.first else {
+        guard let provisionCertificate = prettyprovision.developerCertificates.first else {
             XCTFail()
             return
         }
