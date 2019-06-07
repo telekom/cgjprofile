@@ -9,7 +9,7 @@
 
 import Foundation
 
-// There do not seem to be constants anywere in xOS:
+// There do not seem to be constants anywhere in xOS:
 // https://opensource.apple.com/source/kext_tools/kext_tools-425.1.3/security.c
 
 let kSecOIDUserID          = "0.9.2342.19200300.100.1.1"
@@ -164,8 +164,11 @@ public class Mobileprovision {
             throw CMSError.create
         }
         
-        guard data.withUnsafeBytes({ (bytes) -> OSStatus in
-            CMSDecoderUpdateMessage(cmsDecoder, bytes, data.count)
+        guard try data.withUnsafeBytes({ (bytes: UnsafeRawBufferPointer) -> OSStatus in
+            guard let buffer = bytes.baseAddress else {
+                throw CMSError.update
+            }
+            return CMSDecoderUpdateMessage(cmsDecoder, buffer, data.count)
         }) == noErr else {
             throw CMSError.update
         }
