@@ -8,17 +8,9 @@
  */
 
 import Foundation
-import Security
-import SPMUtility
 import Darwin
 
-public final class cgjprofileTool {
-    private let arguments: [String]
-
-    
-    public init(arguments: [String] = CommandLine.arguments) { 
-        self.arguments = Array(arguments.dropFirst()) // Don't include the command name
-    }
+public final class CgjProfileCore {
     
     static var mobileProvisionURL : Foundation.URL = {
         let fm = FileManager.default
@@ -51,11 +43,11 @@ public final class cgjprofileTool {
         return url
     }
     
-    public func analyzeMobileProfiles (format: String? = nil, pathsUDIDsOrNames : [String]? = nil,  warnDays : Int? = nil, quiet quietArg: Bool? = false) throws -> Int32 {
+    public static func analyzeMobileProfiles (format: String? = nil, pathsUDIDsOrNames : [String]? = nil,  warnDays : Int? = nil, quiet quietArg: Bool? = false) throws -> Int32 {
         
         var result = EXIT_SUCCESS
 
-        let workingPaths : [String] = pathsUDIDsOrNames ?? cgjprofileTool.profilePaths()
+        let workingPaths : [String] = pathsUDIDsOrNames ?? CgjProfileCore.profilePaths()
         let quiet = quietArg ?? false
         
         let identifyCertificates = try Mobileprovision.identifyCertificates()
@@ -63,7 +55,7 @@ public final class cgjprofileTool {
         for path in workingPaths {
             var url : Foundation.URL! = URL(fileURLWithPath: path)
             if url == nil {
-                url = cgjprofileTool.mobileProvisionURL.appendingPathComponent(path)
+                url = CgjProfileCore.mobileProvisionURL.appendingPathComponent(path)
             }
             if let provision = PrettyProvision(url: url) {
                 if !quiet {
@@ -133,25 +125,6 @@ public final class cgjprofileTool {
             }
         }
         return result
-    }
-    
-    public func run() throws -> Int32 {
-        
-        let parser = ArgumentParser(usage: "[--format=\"format string\"] [--warn-expiration days] [--quiet] [path]", overview: "Lists all mobileprovision files, or a single one")
-        
-        let formatOption: OptionArgument<String> = parser.add(option: "--format", shortName: "-f", kind: String.self, usage: "Optional format String\n      %e  ExpirationDate\n      %c  CreationDate\n      %u  UUID\n      %a  AppIDName\n      %t  TeamName\n      %n  Name")
-        let warningsOption: OptionArgument<Int> = parser.add(option: "--warnExpiration", shortName: "-w", kind: Int.self, usage: "Set days to warn about expiration")
-        let quietOption: OptionArgument<Bool> = parser.add(option: "--quiet", shortName: "-q", kind: Bool.self, usage: "Don't print any output")
-        let pathsOption = parser.add(positional: "path", kind: [String].self, optional:true, usage:"Optional paths to, or UDIDs of, mobileprovision files")
-
-        let parsedArguments = try parser.parse(arguments)
-        
-        let workingPaths = parsedArguments.get(pathsOption)
-        let format = parsedArguments.get(formatOption)
-        let warnDays = parsedArguments.get(warningsOption)
-        let quiet = parsedArguments.get(quietOption)
-        
-        return try analyzeMobileProfiles(format: format, pathsUDIDsOrNames: workingPaths, warnDays: warnDays, quiet: quiet)
     }
 }
 

@@ -28,10 +28,9 @@ let package = Package(
         // Targets can depend on other targets in this package, and on products in packages which this package depends on.
         .target(
             name: "cgjprofile",
-            dependencies: ["cgjprofileCore"]),
+            dependencies: ["cgjprofileCore", "SPMUtility"]),
         .target(
-            name: "cgjprofileCore",
-            dependencies: ["SPMUtility"]),
+            name: "cgjprofileCore"),
         .testTarget(
             name: "cgjprofileToolTests",
             dependencies: ["cgjprofileCore"]

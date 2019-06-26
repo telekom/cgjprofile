@@ -8,6 +8,7 @@
  */
 
 import Foundation
+import Security
 
 // There do not seem to be constants anywhere in xOS:
 // https://opensource.apple.com/source/kext_tools/kext_tools-425.1.3/security.c
