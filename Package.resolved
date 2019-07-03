@@ -2,6 +2,15 @@
   "object": {
     "pins": [
       {
+        "package": "cgjprofileLib",
+        "repositoryURL": "https://github.com/below/cgjprofileLib",
+        "state": {
+          "branch": null,
+          "revision": "17957fcf5aa98cd1a25409ce0af24b0d37bce140",
+          "version": "0.9.0"
+        }
+      },
+      {
         "package": "llbuild",
         "repositoryURL": "https://github.com/apple/swift-llbuild.git",
         "state": {
