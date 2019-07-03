@@ -2,7 +2,11 @@
 
 Command Line Tool for macOS to analyse the validity of mobile provision files and the corresponding certificates. The software is well suited to be used in automated setups.
 
+To facilitate reuse, the source code has been split into the tool, and the core functionality. The later is now a dependeny of the former.
+
 Let me know if this is useful, I am looking forward to your comments!
+
+
 
 ## Building
 
