@@ -9,7 +9,7 @@
 
 import Darwin
 import SPMUtility
-import cgjprofileCore
+import cgjprofileLib
 
 do {
     let arguments = Array(CommandLine.arguments.dropFirst()) // Don't include the command name
