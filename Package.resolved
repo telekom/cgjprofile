@@ -5,9 +5,9 @@
         "package": "cgjprofileLib",
         "repositoryURL": "https://github.com/below/cgjProfileLib",
         "state": {
-          "branch": "deletetion",
-          "revision": "e02093d33064930f430dd2de90b405ec05bd14e1",
-          "version": null
+          "branch": null,
+          "revision": "d0f6998e2d7335b6491af82e98d38376fbb497ba",
+          "version": "1.0.0"
         }
       },
       {
