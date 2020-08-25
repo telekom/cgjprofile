@@ -8,7 +8,7 @@
  */
 
 import Darwin
-import SPMUtility
+import ArgumentParser
 import cgjprofileLib
 
 internal func allowDeletion(items: [String]) -> Bool {
@@ -25,30 +25,35 @@ internal func allowDeletion(items: [String]) -> Bool {
     return false
 }
 
-do {
-    let arguments = Array(CommandLine.arguments.dropFirst()) // Don't include the command name
-    
-    let parser = ArgumentParser(usage: "[--format=\"format string\"] [--warn-expiration days] [--quiet] [path]", overview: "Lists all mobileprovision files, or a single one")
-    
-    let formatOption: OptionArgument<String> = parser.add(option: "--format", shortName: "-f", kind: String.self, usage: "Optional format String\n      %e  ExpirationDate\n      %c  CreationDate\n      %u  UUID\n      %a  AppIDName\n      %t  TeamName\n      %n  Name")
-    let warningsOption: OptionArgument<Int> = parser.add(option: "--warnExpiration", shortName: "-w", kind: Int.self, usage: "Set days to warn about expiration")
-    let quietOption: OptionArgument<Bool> = parser.add(option: "--quiet", shortName: "-q", kind: Bool.self, usage: "Don't print any output")
-    let deleteOption: OptionArgument<Bool> = parser.add(option: "-r", shortName: nil, kind: Bool.self, usage: "Delete expired files after confirmation")
-    let expressionOption: OptionArgument<String> = parser.add(option: "--regex", shortName: "-g", kind: String.self, usage: "Optional regular Expression. Only items matching this will be shown")
-    let pathsOption = parser.add(positional: "path", kind: [String].self, optional:true, usage:"Optional paths to, or UDIDs of, mobileprovision files")
-    let parsedArguments = try parser.parse(arguments)
-    
-    let workingPaths = parsedArguments.get(pathsOption)
-    let format = parsedArguments.get(formatOption)
-    let warnDays = parsedArguments.get(warningsOption)
-    let quiet = parsedArguments.get(quietOption)
-    let regex = parsedArguments.get(expressionOption)
-    let delete = parsedArguments.get(deleteOption) ?? false
-    
-    let result = try CgjProfileCore.analyzeMobileProfiles(format: format, pathsUDIDsOrNames: workingPaths, regEx: regex, warnDays: warnDays, quiet: quiet, deletionHandler: delete ? allowDeletion:nil)
 
-    exit(result)
-} catch {
-    fputs("Whoops! An error occurred: \(error)", stderr)
-    exit(EXIT_FAILURE)
+struct Cgjprofile: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        abstract: "Lists all mobileprovision files, or a single one")
+
+    @Option(name: [.short, .customLong("warnExpiration")], help: "Set days to warn about expiration")
+    var warnExpiration: Int = 0
+
+    @Option(name: [.short, .long], help: "%e  ExpirationDate\n%c  CreationDate\n%u  UUID\n%a  AppIDName\n%t  TeamName\n%n  Name")
+    var format: String = "%u %t %n"
+
+    @Flag(name: [.short, .long], help: "Don't print any output (only errors")
+    var quiet = false
+
+    @Flag(name: [.customLong("r", withSingleDash: true)], help: "Delete expired files after confirmation")
+    var delete = false
+
+    @Argument(help: "Optional paths to, or UDIDs of, mobileprovision files")
+    var paths = [String]()
+
+    func run() throws {
+        do {
+            _ = try CgjProfileCore.analyzeMobileProfiles(format: format, pathsUDIDsOrNames: (paths.count > 0) ? paths:nil, regEx: nil, warnDays: warnExpiration, quiet: quiet, deletionHandler: delete ? allowDeletion:nil)
+        } catch {
+            fputs("Whoops! An error occurred: \(error)", stderr)
+            throw error
+        }
+
+    }
 }
+
+Cgjprofile.main()   

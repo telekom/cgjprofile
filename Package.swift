@@ -19,8 +19,7 @@ let package = Package(
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
-        // .package(url: /* package url */, from: "1.0.0"),
-        .package(url: "https://github.com/apple/swift-package-manager.git", .branch("master")),
+        .package(url: "https://github.com/apple/swift-argument-parser", from: "0.3.0"),
         .package(url: "https://github.com/below/cgjProfileLib", from: "1.0.0")
     ],
     targets: [
@@ -28,6 +27,6 @@ let package = Package(
         // Targets can depend on other targets in this package, and on products in packages which this package depends on.
         .target(
             name: "cgjprofile",
-            dependencies: ["cgjprofileLib", "SPMUtility"]),
+            dependencies: ["cgjprofileLib", "ArgumentParser"]),
     ]
 )
